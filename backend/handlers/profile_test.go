@@ -97,7 +97,10 @@ func TestProfileHandler_Save(t *testing.T) {
 
 	t.Run("Success Update", func(t *testing.T) {
 		input := map[string]string{"full_name": "Mukul", "telephone": "999"}
-		body, _ := json.Marshal(input)
+		body, err := json.Marshal(input)
+		if err != nil {
+			t.Fatalf("failed to marshal input: %v", err)
+		}
 		req := httptest.NewRequest(http.MethodPost, "/profile/save", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		ctx := context.WithValue(req.Context(), middleware.UserEmailKey, "test@ex.com")
@@ -117,7 +120,10 @@ func TestProfileHandler_Save(t *testing.T) {
 
 	t.Run("DB Failure", func(t *testing.T) {
 		input := map[string]string{"full_name": "Mukul", "telephone": "999"}
-		body, _ := json.Marshal(input)
+		body, err := json.Marshal(input)
+		if err != nil {
+			t.Fatalf("failed to marshal input: %v", err)
+		}
 		req := httptest.NewRequest(http.MethodPost, "/profile/save", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		ctx := context.WithValue(req.Context(), middleware.UserEmailKey, "test@ex.com")

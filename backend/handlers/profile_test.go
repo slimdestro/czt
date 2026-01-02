@@ -60,7 +60,9 @@ func TestProfileHandler_View(t *testing.T) {
 			t.Errorf("expected 200, got %d", w.Code)
 		}
 		var resp ProfileResponse
-		json.NewDecoder(w.Body).Decode(&resp)
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode profile response: %v", err)
+		}
 		if resp.Email != "test@ex.com" || resp.FullName != "Mukul Kumar" {
 			t.Errorf("unexpected response body")
 		}

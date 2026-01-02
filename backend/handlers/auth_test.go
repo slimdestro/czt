@@ -37,7 +37,10 @@ func TestAuthHandler_Login(t *testing.T) {
 			"email":    "test@ex.com",
 			"password": "pass",
 		}
-		body, _ := json.Marshal(loginData)
+		body, err := json.Marshal(loginData)
+		if err != nil {
+			t.Fatalf("failed to marshal login data: %v", err)
+		}
 
 		req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")

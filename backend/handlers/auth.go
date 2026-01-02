@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -26,71 +27,73 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.FormValue("email")
-	pass := r.FormValue("password")
+	var creds struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
-	if email == "" || pass == "" {
+	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+	} else {
+		r.ParseForm()
+		creds.Email = r.FormValue("email")
+		creds.Password = r.FormValue("password")
+	}
+
+	if creds.Email == "" || creds.Password == "" {
 		http.Error(w, "Email and password are required", http.StatusBadRequest)
 		return
 	}
 
 	var id int
-	query := "SELECT id FROM users WHERE email=? AND password=?"
-	err := h.DB.QueryRowContext(r.Context(), query, email, pass).Scan(&id)
+	err := h.DB.QueryRowContext(r.Context(), "SELECT id FROM users WHERE email=? AND password=?", creds.Email, creds.Password).Scan(&id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-			return
-		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		http.Error(w, "Server configuration error", http.StatusInternalServerError)
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": email,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(),
-		"iat":   time.Now().Unix(),
+		"email": creds.Email,
 	})
-
-	tokenString, err := token.SignedString([]byte(secret))
-	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
-		return
-	}
+	tokenString, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(loginResponse{Token: tokenString}); err != nil {
-		http.Error(w, "Failed to write response", http.StatusInternalServerError)
-		return
-	}
-
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	email := r.FormValue("email")
-	pass := r.FormValue("password")
+	var creds struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
-	if email == "" || pass == "" {
+	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+	} else {
+		r.ParseForm()
+		creds.Email = r.FormValue("email")
+		creds.Password = r.FormValue("password")
+	}
+
+	if creds.Email == "" || creds.Password == "" {
 		http.Error(w, "Email and password are required", http.StatusBadRequest)
 		return
 	}
 
-	query := "INSERT INTO users(email, password, provider) VALUES(?, ?, ?)"
-	_, err := h.DB.ExecContext(r.Context(), query, email, pass, "local")
+	_, err := h.DB.ExecContext(r.Context(), "INSERT INTO users (email, password, provider) VALUES (?, ?, ?)", creds.Email, creds.Password, "local")
 	if err != nil {
-		http.Error(w, "Signup failed", http.StatusBadRequest)
+		http.Error(w, "User already exists", http.StatusConflict)
 		return
 	}
 

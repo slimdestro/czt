@@ -65,7 +65,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(loginResponse{Token: tokenString})
+	if err := json.NewEncoder(w).Encode(loginResponse{Token: tokenString}); err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {

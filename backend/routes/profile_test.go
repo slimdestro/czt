@@ -28,7 +28,8 @@ func TestProfileRoutes(t *testing.T) {
 
 		rows := sqlmock.NewRows([]string{"full_name", "telephone", "email"}).
 			AddRow("Mukul", "123", "test@ex.com")
-		mock.ExpectQuery("SELECT (.+) FROM users").WithArgs("test@ex.com").WillReturnRows(rows)
+		mock.ExpectQuery("SELECT full_name, telephone, email FROM users WHERE email=?").
+			WithArgs("test@ex.com").WillReturnRows(rows)
 
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
@@ -41,7 +42,7 @@ func TestProfileRoutes(t *testing.T) {
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
-			t.Errorf("expected 401")
+			t.Errorf("expected 401, got %d", w.Code)
 		}
 	})
 
@@ -49,11 +50,13 @@ func TestProfileRoutes(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
 		req.Header.Set("X-User-Email", "none@ex.com")
 		w := httptest.NewRecorder()
-		mock.ExpectQuery("SELECT (.+) FROM users").WillReturnError(sql.ErrNoRows)
+
+		mock.ExpectQuery("SELECT full_name, telephone, email FROM users WHERE email=?").
+			WithArgs("none@ex.com").WillReturnError(sql.ErrNoRows)
 
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusNotFound {
-			t.Errorf("expected 404")
+			t.Errorf("expected 404, got %d", w.Code)
 		}
 	})
 
@@ -63,12 +66,13 @@ func TestProfileRoutes(t *testing.T) {
 		req.Header.Set("X-User-Email", "test@ex.com")
 		w := httptest.NewRecorder()
 
-		mock.ExpectExec("UPDATE users SET").WithArgs("New Name", "999", "test@ex.com").
+		mock.ExpectExec("UPDATE users SET full_name=?, telephone=? WHERE email=?").
+			WithArgs("New Name", "999", "test@ex.com").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
-			t.Errorf("expected 200")
+			t.Errorf("expected 200, got %d", w.Code)
 		}
 	})
 
@@ -77,7 +81,7 @@ func TestProfileRoutes(t *testing.T) {
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusMethodNotAllowed {
-			t.Errorf("expected 405")
+			t.Errorf("expected 405, got %d", w.Code)
 		}
 	})
 }

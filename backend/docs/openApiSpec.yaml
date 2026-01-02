@@ -1,0 +1,108 @@
+openapi: 3.0.0
+info:
+  title: ccz Backend API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081/api
+paths:
+  /auth/login:
+    post:
+      summary: User Login
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Unauthorized
+  /auth/signup:
+    post:
+      summary: User Signup
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+  /profile:
+    get:
+      summary: View Profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          description: Unauthorized
+  /profile/save:
+    post:
+      summary: Update Profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                telephone:
+                  type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+components:
+  schemas:
+    Profile:
+      type: object
+      properties:
+        full_name:
+          type: string
+        telephone:
+          type: string
+        email:
+          type: string
+        email_disabled:
+          type: boolean
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

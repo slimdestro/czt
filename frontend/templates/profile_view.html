@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>cczTest - Profile</title>
+    <link rel="stylesheet" href="/static/styles.css">
+<style>
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h2>Main Profile</h2>
+    <div class="info-box">
+        <strong>Note:</strong> This profile page is only accessible because you are successfully authenticated(Google/Local)
+    </div>
+
+    <p><strong>Full Name:</strong> {{.FullName}}</p>
+    <p><strong>Telephone:</strong> {{.Telephone}}</p>
+    <p><strong>Email:</strong> {{.Email}}</p>
+
+    <div class="actions">
+        <form method="GET" action="/profile/edit">
+            <button type="submit">Edit Profile</button>
+        </form>
+
+        <form method="POST" action="/logout">
+            <button type="submit">Logout</button>
+        </form>
+    </div>
+</body>
+</html>

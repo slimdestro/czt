@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>cczTest - Sign Up</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h2>Sign Up</h2>
+
+    {{if .Error}}
+        <p>{{.Error}}</p>
+    {{end}}
+
+    <form method="POST" action="/signup">
+        <div>
+            <label>Email:</label>
+            <input type="email" name="email" required>
+        </div>
+
+        <div>
+            <label>Password:</label>
+            <input type="password" name="password" required>
+        </div>
+
+        <div>
+            <button type="submit">Sign Up</button>
+        </div>
+    </form>
+
+    <form method="GET" action="/auth/google">
+        <button type="submit">Sign Up with Google</button>
+    </form>
+
+    <p>
+        <a href="/login">Existing User Login</a>
+    </p>
+</body>
+</html>

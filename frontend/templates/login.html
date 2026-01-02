@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>cczTest - Login</title>
+        <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div id="archBox" class="arch-content">
+    <h3>Architecture Note</h3>
+    <ul>
+        <li><strong>Frontend Role:</strong> Acts as the "Gatekeeper." It manages the cookie and decides which UI to show.</li>
+        <li><strong>Backend Role:</strong> Acts as the "Vault." It holds the data and only gives it up if the Frontend provides a valid identifier (the email header).</li>
+        <li><strong>Bridge:</strong> Because they live on different ports (:8080 and :8081), we use URL Query Parameters (<code>?email=...</code>) to pass information from the Backend back to the Frontend.</li>
+    </ul>
+
+    <hr style="border: 0; border-top: 1px solid #ccc; margin: 15px 0;">
+
+    <p><strong>Industry Standard (JWT):</strong></p>
+    <p style="font-size: 0.9em;">
+        Reccomeded approach -  <strong>JWT (JSON Web Tokens)</strong> instead of simple cookies. 
+        </p>
+</div>
+    <h2>Login <button class="arch-note" onclick="toggleArch()">Arch note</button></h2>
+
+    {{if .Error}}
+        <p>{{.Error}}</p>
+    {{end}}
+
+    <form method="POST" action="/login">
+        <div>
+            <label>Email:</label>
+            <input type="email" name="email" required>
+        </div>
+
+        <div>
+            <label>Password:</label>
+            <input type="password" name="password" required>
+        </div>
+
+        <div>
+            <button type="submit">Login</button>
+        </div>
+    </form>
+
+    <form method="GET" action="/auth/google">
+        <button type="submit">Login with Google</button>
+    </form>
+
+    <p>
+        <a href="/signup">Sign Up</a>
+    </p>
+</body>
+<script>
+        function toggleArch() {
+            var x = document.getElementById("archBox");
+            if (x.style.display === "block") {
+                x.style.display = "none";
+            } else {
+                x.style.display = "block";
+            }
+        }
+    </script>
+</html>

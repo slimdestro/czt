@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"strings"
 )
 
 type ProfileHandler struct {
@@ -85,15 +86,23 @@ func (h *ProfileHandler) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := r.ParseForm(); err != nil {
+		http.Redirect(w, r, "/profile/edit?error=parse_failed", http.StatusSeeOther)
+		return
+	}
+
 	payload := map[string]string{
 		"full_name": r.FormValue("full_name"),
 		"telephone": r.FormValue("telephone"),
 	}
 
 	reqBody, _ := json.Marshal(payload)
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, h.APIBaseURL+"/api/profile/save", bytes.NewReader(reqBody))
+	baseURL := strings.TrimSuffix(h.APIBaseURL, "/")
+	fullURL := baseURL + "/profile/save"
+
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, fullURL, bytes.NewReader(reqBody))
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -101,15 +110,19 @@ func (h *ProfileHandler) Save(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := h.Client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		http.Redirect(w, r, "/profile/edit?error=update_failed", http.StatusSeeOther)
 		return
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		http.Redirect(w, r, "/profile/edit?error=update_failed", http.StatusSeeOther)
+		return
+	}
+
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
-
 func (h *ProfileHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }

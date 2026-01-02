@@ -26,18 +26,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//email := r.FormValue("email")
-	//pass := r.FormValue("password")
-	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-	email := body.Email
-	pass := body.Password
+	email := r.FormValue("email")
+	pass := r.FormValue("password")
 
 	if email == "" || pass == "" {
 		http.Error(w, "Email and password are required", http.StatusBadRequest)

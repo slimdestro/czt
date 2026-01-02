@@ -83,17 +83,10 @@ func (h *ProfileHandler) Save(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := "UPDATE users SET full_name=?, telephone=? WHERE email=?"
-	result, err := h.DB.ExecContext(r.Context(), query, input.FullName, input.Telephone, email)
+	_, err := h.DB.ExecContext(r.Context(), query, input.FullName, input.Telephone, email)
 	if err != nil {
 		http.Error(w, "Failed to update profile", http.StatusInternalServerError)
 		return
 	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		http.Error(w, "No changes made or user not found", http.StatusNotFound)
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
 }

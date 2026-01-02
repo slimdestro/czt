@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"ccz/handlers"
+	"ccz/frontend/handlers"
 )
 
 func main() {

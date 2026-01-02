@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"ccz/handlers"
@@ -34,15 +36,17 @@ func TestRegisterAuthRoutes(t *testing.T) {
 	mux.HandleFunc("/api/auth/google/callback", h.GoogleCallback)
 
 	t.Run("Login", func(t *testing.T) {
-		body, _ := json.Marshal(map[string]string{"email": "test@ex.com", "password": "pass"})
-		mock.ExpectQuery("SELECT id FROM users WHERE email=? AND password=?").WithArgs("test@ex.com", "pass").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+		mock.ExpectQuery("SELECT id FROM users.*").
+			WithArgs("test@ex.com", "pass").
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+		body, _ := json.Marshal(map[string]string{
+			"email":    "test@ex.com",
+			"password": "pass",
+		})
 
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Form = map[string][]string{
-			"email":    {"test@ex.com"},
-			"password": {"pass"},
-		}
+		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
@@ -51,16 +55,21 @@ func TestRegisterAuthRoutes(t *testing.T) {
 	})
 
 	t.Run("Signup", func(t *testing.T) {
-		mock.ExpectExec("INSERT INTO users").WithArgs("new@ex.com", "pass", "local").WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec("INSERT INTO users.*").
+			WithArgs("new@ex.com", "pass", "local").
+			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/signup", bytes.NewBufferString("email=new@ex.com&password=pass"))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Form = map[string][]string{
+		formData := url.Values{
 			"email":    {"new@ex.com"},
 			"password": {"pass"},
 		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/auth/signup", strings.NewReader(formData.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
+
 		if w.Code != http.StatusCreated {
 			t.Errorf("expected 201, got %d", w.Code)
 		}
@@ -96,5 +105,7 @@ func TestRegisterAuthRoutes(t *testing.T) {
 		}
 	})
 
-	mock.ExpectationsWereMet()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %s", err)
+	}
 }

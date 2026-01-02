@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -30,18 +32,31 @@ func TestAuthHandler_Login(t *testing.T) {
 
 	t.Run("Valid Credentials", func(t *testing.T) {
 		os.Setenv("JWT_SECRET", "secret")
-		form := url.Values{"email": {"test@ex.com"}, "password": {"pass"}}
-		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		loginData := map[string]string{
+			"email":    "test@ex.com",
+			"password": "pass",
+		}
+		body, _ := json.Marshal(loginData)
+
+		req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
-		mock.ExpectQuery("SELECT id FROM users WHERE email=? AND password=?").
+		mock.ExpectQuery("SELECT id FROM users WHERE email=\\? AND password=\\?").
 			WithArgs("test@ex.com", "pass").
 			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 		h.Login(w, req)
+
 		if w.Code != http.StatusOK {
 			t.Errorf("expected 200, got %d", w.Code)
+		}
+
+		var resp loginResponse
+		json.NewDecoder(w.Body).Decode(&resp)
+		if resp.Token == "" {
+			t.Error("expected token, got empty string")
 		}
 	})
 }

@@ -20,7 +20,9 @@ func (h *AuthHandler) ShowLogin(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/profile", http.StatusSeeOther)
 		return
 	}
-	h.Tmpl.ExecuteTemplate(w, "login.html", nil)
+	if err := h.Tmpl.ExecuteTemplate(w, "login.html", nil); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -36,9 +38,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.Client.PostForm(h.APIBaseURL+"/auth/login", form)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		h.Tmpl.ExecuteTemplate(w, "login.html", map[string]string{
+		if e := h.Tmpl.ExecuteTemplate(w, "login.html", map[string]string{
 			"Error": "Invalid credentials",
-		})
+		}); e != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	}
 	defer resp.Body.Close()
@@ -85,7 +89,9 @@ func (h *AuthHandler) AuthCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) ShowSignup(w http.ResponseWriter, r *http.Request) {
-	h.Tmpl.ExecuteTemplate(w, "signup.html", nil)
+	if err := h.Tmpl.ExecuteTemplate(w, "signup.html", nil); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -101,9 +107,11 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.Client.PostForm(h.APIBaseURL+"/auth/signup", form)
 	if err != nil || resp.StatusCode != http.StatusCreated {
-		h.Tmpl.ExecuteTemplate(w, "signup.html", map[string]string{
+		if e := h.Tmpl.ExecuteTemplate(w, "signup.html", map[string]string{
 			"Error": "Signup failed. Please try again.",
-		})
+		}); e != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	}
 	defer resp.Body.Close()

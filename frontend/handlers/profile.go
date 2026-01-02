@@ -57,7 +57,9 @@ func (h *ProfileHandler) View(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	h.Tmpl.ExecuteTemplate(w, "profile_view.html", vm)
+	if err := h.Tmpl.ExecuteTemplate(w, "profile_view.html", vm); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func (h *ProfileHandler) Edit(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +68,9 @@ func (h *ProfileHandler) Edit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	h.Tmpl.ExecuteTemplate(w, "profile_edit.html", vm)
+	if err := h.Tmpl.ExecuteTemplate(w, "profile_edit.html", vm); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 func (h *ProfileHandler) Save(w http.ResponseWriter, r *http.Request) {

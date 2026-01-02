@@ -54,7 +54,9 @@ func TestAuthHandler_Login(t *testing.T) {
 		}
 
 		var resp loginResponse
-		json.NewDecoder(w.Body).Decode(&resp)
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
 		if resp.Token == "" {
 			t.Error("expected token, got empty string")
 		}

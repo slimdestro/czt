@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"ccz/handlers"
+	"ccz/middleware"
+
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
@@ -18,8 +21,10 @@ func TestProfileRoutes(t *testing.T) {
 	}
 	defer db.Close()
 
+	h := &handlers.ProfileHandler{DB: db}
 	mux := http.NewServeMux()
-	RegisterProfileRoutes(mux, db)
+	mux.HandleFunc("/api/profile", middleware.AuthMiddleware(h.View))
+	mux.HandleFunc("/api/profile/save", middleware.AuthMiddleware(h.Save))
 
 	t.Run("ViewProfile_Success", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
@@ -62,7 +67,7 @@ func TestProfileRoutes(t *testing.T) {
 
 	t.Run("UpdateProfile_Success", func(t *testing.T) {
 		body, _ := json.Marshal(map[string]string{"full_name": "New Name", "telephone": "999"})
-		req := httptest.NewRequest(http.MethodPost, "/api/profile/update", bytes.NewBuffer(body))
+		req := httptest.NewRequest(http.MethodPost, "/api/profile/save", bytes.NewBuffer(body))
 		req.Header.Set("X-User-Email", "test@ex.com")
 		w := httptest.NewRecorder()
 
@@ -77,11 +82,16 @@ func TestProfileRoutes(t *testing.T) {
 	})
 
 	t.Run("UpdateProfile_MethodNotAllowed", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, "/api/profile/update", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/api/profile/save", nil)
+		req.Header.Set("X-User-Email", "test@ex.com")
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusMethodNotAllowed {
 			t.Errorf("expected 405, got %d", w.Code)
 		}
 	})
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
 }

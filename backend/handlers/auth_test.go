@@ -29,11 +29,16 @@ func TestAuthHandler_Login(t *testing.T) {
 	})
 
 	t.Run("Valid Credentials", func(t *testing.T) {
+		os.Setenv("JWT_SECRET", "secret")
 		form := url.Values{"email": {"test@ex.com"}, "password": {"pass"}}
 		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		mock.ExpectQuery("SELECT id FROM users").WithArgs("test@ex.com", "pass").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+		mock.ExpectQuery("SELECT id FROM users WHERE email=? AND password=?").
+			WithArgs("test@ex.com", "pass").
+			WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
 		h.Login(w, req)
 		if w.Code != http.StatusOK {
 			t.Errorf("expected 200, got %d", w.Code)
@@ -53,10 +58,14 @@ func TestAuthHandler_Signup(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
-	mock.ExpectExec("INSERT INTO users").WithArgs("new@ex.com", "pass", "local").WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("INSERT INTO users").
+		WithArgs("new@ex.com", "pass", "local").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
 	h.Signup(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
 	}
 }
 
@@ -79,17 +88,18 @@ func TestAuthHandler_Logout(t *testing.T) {
 	h := &AuthHandler{}
 	w := httptest.NewRecorder()
 	h.Logout(w, httptest.NewRequest(http.MethodGet, "/logout", nil))
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200")
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
 	}
 }
 
 func TestAuthHandler_Google(t *testing.T) {
 	os.Setenv("GOOGLE_CLIENT_ID", "id")
+	os.Setenv("GOOGLE_REDIRECT_URL", "http://redirect.com")
 	h := &AuthHandler{}
 	w := httptest.NewRecorder()
 	h.Google(w, httptest.NewRequest(http.MethodGet, "/google", nil))
 	if w.Code != http.StatusSeeOther {
-		t.Errorf("expected 303")
+		t.Errorf("expected 303, got %d", w.Code)
 	}
 }

@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"bytes"
+	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
-	"strings"
 	"testing"
+
+	"ccz/middleware"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -29,7 +32,7 @@ func TestProfileHandler_View(t *testing.T) {
 		}
 	})
 
-	t.Run("Unauthorized - No Cookie", func(t *testing.T) {
+	t.Run("Unauthorized - No Context Email", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/profile", nil)
 		w := httptest.NewRecorder()
 		h.View(w, req)
@@ -40,13 +43,14 @@ func TestProfileHandler_View(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/profile", nil)
-		req.AddCookie(&http.Cookie{Name: "session", Value: "test@ex.com"})
+		ctx := context.WithValue(req.Context(), middleware.UserEmailKey, "test@ex.com")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
 		rows := sqlmock.NewRows([]string{"full_name", "telephone", "email"}).
 			AddRow("Mukul Kumar", "123456", "test@ex.com")
 
-		mock.ExpectQuery("SELECT (.+) FROM users WHERE email=\\?").
+		mock.ExpectQuery("SELECT COALESCE\\(full_name, ''\\), COALESCE\\(telephone, ''\\), email FROM users WHERE email=\\?").
 			WithArgs("test@ex.com").
 			WillReturnRows(rows)
 
@@ -55,14 +59,20 @@ func TestProfileHandler_View(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Errorf("expected 200, got %d", w.Code)
 		}
+		var resp ProfileResponse
+		json.NewDecoder(w.Body).Decode(&resp)
+		if resp.Email != "test@ex.com" || resp.FullName != "Mukul Kumar" {
+			t.Errorf("unexpected response body")
+		}
 	})
 
 	t.Run("User Not Found", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/profile", nil)
-		req.AddCookie(&http.Cookie{Name: "session", Value: "missing@ex.com"})
+		ctx := context.WithValue(req.Context(), middleware.UserEmailKey, "missing@ex.com")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		mock.ExpectQuery("SELECT (.+) FROM users WHERE email=\\?").
+		mock.ExpectQuery("SELECT COALESCE\\(full_name, ''\\), COALESCE\\(telephone, ''\\), email FROM users WHERE email=\\?").
 			WithArgs("missing@ex.com").
 			WillReturnError(sql.ErrNoRows)
 
@@ -84,13 +94,15 @@ func TestProfileHandler_Save(t *testing.T) {
 	h := &ProfileHandler{DB: db}
 
 	t.Run("Success Update", func(t *testing.T) {
-		form := url.Values{"full_name": {"Mukul"}, "telephone": {"999"}}
-		req := httptest.NewRequest(http.MethodPost, "/profile/save", strings.NewReader(form.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.AddCookie(&http.Cookie{Name: "session", Value: "test@ex.com"})
+		input := map[string]string{"full_name": "Mukul", "telephone": "999"}
+		body, _ := json.Marshal(input)
+		req := httptest.NewRequest(http.MethodPost, "/profile/save", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		ctx := context.WithValue(req.Context(), middleware.UserEmailKey, "test@ex.com")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		mock.ExpectExec("UPDATE users SET").
+		mock.ExpectExec("UPDATE users SET full_name=\\?, telephone=\\? WHERE email=\\?").
 			WithArgs("Mukul", "999", "test@ex.com").
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -102,13 +114,15 @@ func TestProfileHandler_Save(t *testing.T) {
 	})
 
 	t.Run("DB Failure", func(t *testing.T) {
-		form := url.Values{"full_name": {"Mukul"}, "telephone": {"999"}}
-		req := httptest.NewRequest(http.MethodPut, "/profile/save", strings.NewReader(form.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.AddCookie(&http.Cookie{Name: "session", Value: "test@ex.com"})
+		input := map[string]string{"full_name": "Mukul", "telephone": "999"}
+		body, _ := json.Marshal(input)
+		req := httptest.NewRequest(http.MethodPost, "/profile/save", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		ctx := context.WithValue(req.Context(), middleware.UserEmailKey, "test@ex.com")
+		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		mock.ExpectExec("UPDATE users SET").
+		mock.ExpectExec("UPDATE users SET full_name=\\?, telephone=\\? WHERE email=\\?").
 			WillReturnError(sql.ErrConnDone)
 
 		h.Save(w, req)

@@ -1,5 +1,4 @@
 # cczTest | Golang
-Reference: https://drive.google.com/file/d/12uM3gkuGfqF161KdRzWOF7LEuy_5aIIy/view?usp=sharing
 
 ## Project Structure
 
